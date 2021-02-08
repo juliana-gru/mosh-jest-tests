@@ -1,4 +1,6 @@
 const lib = require('../lib');
+const db = require('../db');
+const mail = require('../mail');
 
 describe('absolute', () => {
   it('should return a positive number if input is positive', () => {
@@ -81,5 +83,45 @@ describe('registerUser', () => {
     const result = lib.registerUser('Mosh');
     expect(result).toMatchObject({ username: 'Mosh' });
     expect(result.id).toBeGreaterThan(0);
+  });
+});
+
+// MOCK FUNCTIONS
+
+describe('applyDiscount', () => {
+  it('should apply 10% discount if customer has more than 10 points', () => {
+    //To mock the db call, we set the function to a new function.
+    db.getCustomerSync = function(customerId) {
+      console.log('Fake reading a customer...');
+      return { id: customerId, points: 11 };
+    }
+
+    const order = { customerId: 1, totalPrice: 10 };
+    lib.applyDiscount(order);
+    expect(order.totalPrice).toBe(9);
+
+  })
+});
+
+describe('notifyCustomer', () => {
+  it('should send an email to the customer', () => {
+    //mocking function without jest
+    db.getCustomerSync = function(customerId) {
+      return { email: 'a' };
+    }
+    
+    let mailSent = false;
+    mail.send = function(email, message) {
+      mailSent = true;
+    }
+
+    //better approach for MOCKs using jest
+    db.getCustomerSync = jest.fn().mockReturnValue({ email: 'a' })
+    mail.send = jest.fn();
+
+    lib.notifyCustomer({ customerId: 1 });
+
+    expect(mail.send).toHaveBeenCalled();
+    expect(mail.send.mock.calls[0][0]).toBe('a');
   });
 });
